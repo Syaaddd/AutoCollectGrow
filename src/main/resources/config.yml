@@ -1,0 +1,98 @@
+# AutoCollectGrow Configuration
+# Plugin: AutoCollect for Slimefun
+# Author: Syaaddd
+
+# =====================================================
+# General Settings
+# =====================================================
+
+# Scan interval in ticks (20 ticks = 1 second)
+# Lower values = faster scanning but more server load
+# Recommended: 100-200 ticks (5-10 seconds)
+settings:
+  scan-interval-ticks: 100
+
+  # =====================================================
+  # Tier Radius Settings
+  # =====================================================
+  # Radius in blocks for each tier
+  # Tier 1: Basic (5 blocks)
+  # Tier 2: Advanced (10 blocks)
+  # Tier 3: Elite (20 blocks)
+  # Tier 4: Quantum (50 blocks)
+  tier-radius:
+    tier1: 5
+    tier2: 10
+    tier3: 20
+    tier4: 50
+
+  # =====================================================
+  # Auto-Sell Settings
+  # =====================================================
+  auto-sell:
+    # Enable automatic selling at regular intervals
+    enabled: false
+    # Interval in minutes for auto-sell
+    interval-minutes: 30
+
+  # =====================================================
+  # Item Filters
+  # =====================================================
+  # Items that are allowed to be collected (* = all items)
+  item-whitelist:
+    - "*"
+
+  # Items that are blocked from being collected
+  item-blacklist:
+    - "BEDROCK"
+    - "BARRIER"
+    - "COMMAND_BLOCK"
+    - "STRUCTURE_BLOCK"
+    - "JIGSAW"
+    - "NETHER_STAR" # Prevent collecting quest items
+
+  # =====================================================
+  # Sell History Settings
+  # =====================================================
+  sell-history:
+    # Enable sell history logging
+    enabled: true
+    # Maximum number of entries to keep in history
+    max-size: 50
+
+  # =====================================================
+  # Client Settings
+  # =====================================================
+  client:
+    # Play sounds on collection and selling
+    sounds: true
+    # Show action bar and chat messages
+    messages: true
+
+# =====================================================
+# Messages (Customizable)
+# =====================================================
+messages:
+  prefix: "§6[AutoCollect] §r"
+  no-permission: "§cYou don't have permission to do that!"
+  machine-placed: "§aAutoCollector placed successfully!"
+  machine-broken: "§cAutoCollector broken. Collection stopped."
+  collection-started: "§aStarted collecting items..."
+  collection-finished: "§aCollection complete! Collected %amount% items."
+  sell-success: "§aSold all items for $%amount%!"
+  sell-failed: "§cFailed to sell items. Check console for details."
+  inventory-full: "§cYour inventory is full!"
+  auto-sell-enabled: "§aAuto-sell enabled! Will sell every %minutes% minutes."
+  auto-sell-disabled: "§cAuto-sell disabled."
+  upgrade-success: "§aMachine upgraded to Tier %tier%!"
+  upgrade-failed: "§cCannot upgrade this machine."
+
+# =====================================================
+# Sounds
+# =====================================================
+sounds:
+  collection-start: "ENTITY_EXPERIENCE_ORB_PICKUP"
+  collection-finish: "ENTITY_PLAYER_LEVELUP"
+  sell-success: "ENTITY_VILLAGER_YES"
+  sell-failed: "ENTITY_VILLAGER_NO"
+  upgrade: "BLOCK_ANVIL_USE"

@@ -1,0 +1,29 @@
+name: AutoCollectGrow
+version: '1.0.0-SNAPSHOT'
+main: com.github.Syaaddd.autoCollectGrow.AutoCollectGrow
+api-version: '1.21'
+author: Syaaddd
+description: AutoCollect for Slimefun - Automated item collection and selling system
+website: https://github.com/Syaaddd/AutoCollectGrow
+
+depend:
+  - Slimefun
+  - Vault
+
+softdepend:
+  - ShopGUIPlus
+  - PlaceholderAPI
+
+permissions:
+  autocollect.admin:
+    description: Access to admin commands and features
+    default: op
+  autocollect.use:
+    description: Use AutoCollect machines
+    default: true
+  autocollect.sell:
+    description: Sell items through AutoCollect
+    default: true
+  autocollect.upgrade:
+    description: Upgrade AutoCollect machines
+    default: op
