@@ -42,18 +42,25 @@ public class ChestCollectorGUI extends BlockMenuPreset {
     public void init() {
         // Add border - prevent taking
         ItemStack glass = new CustomItemStack(Material.BLACK_STAINED_GLASS_PANE, "§7");
-        
-        // Top row
+
+        // Top row (0-8)
         for (int i = 0; i < 9; i++) {
             addItem(i, glass);
             addMenuClickHandler(i, (p, slot, item, action) -> false);
         }
-        // Bottom row
-        for (int i = 45; i < 54; i++) {
-            addItem(i, glass);
-            addMenuClickHandler(i, (p, slot, item, action) -> false);
+        
+        // Bottom row (45-53) - EXCLUDING control button slots
+        // Control buttons at: 45, 46, 49, 50, 53
+        // Border only at: 47, 48, 51, 52
+        int[] bottomBorderSlots = {47, 48, 51, 52};
+        for (int slot : bottomBorderSlots) {
+            addItem(slot, glass);
+            addMenuClickHandler(slot, (p, slot2, item, action) -> false);
         }
-        // Left and right columns
+        
+        // Left and right columns (excluding top and bottom rows)
+        // Left: 9, 18, 27, 36
+        // Right: 17, 26, 35, 44
         for (int i = 9; i < 45; i += 9) {
             addItem(i, glass);
             addMenuClickHandler(i, (p, slot, item, action) -> false);
@@ -249,7 +256,7 @@ public class ChestCollectorGUI extends BlockMenuPreset {
                 continue;
             }
 
-            double price = shopHook.getItemPrice(item);
+            double price = shopHook.getItemPrice(player, item);
             if (price > 0) {
                 totalValue += price * item.getAmount();
                 itemsSold += item.getAmount();

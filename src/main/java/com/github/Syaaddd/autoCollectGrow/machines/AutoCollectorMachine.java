@@ -41,12 +41,20 @@ public abstract class AutoCollectorMachine extends SlimefunItem {
     // Track owners: location -> player UUID
     private static final Map<Location, UUID> owners = new ConcurrentHashMap<>();
 
-    // Storage slots (0-44 = 45 slots)
-    protected static final int[] STORAGE_SLOTS = new int[45];
+    // Storage slots (middle area excluding borders and control buttons)
+    // Rows 2-5: slots 10-16, 19-25, 28-34, 37-43 (7 slots x 4 rows = 28 slots)
+    protected static final int[] STORAGE_SLOTS;
     static {
-        for (int i = 0; i < 45; i++) {
-            STORAGE_SLOTS[i] = i;
-        }
+        STORAGE_SLOTS = new int[28];
+        int idx = 0;
+        // Row 2: 10-16
+        for (int i = 10; i <= 16; i++) STORAGE_SLOTS[idx++] = i;
+        // Row 3: 19-25
+        for (int i = 19; i <= 25; i++) STORAGE_SLOTS[idx++] = i;
+        // Row 4: 28-34
+        for (int i = 28; i <= 34; i++) STORAGE_SLOTS[idx++] = i;
+        // Row 5: 37-43
+        for (int i = 37; i <= 43; i++) STORAGE_SLOTS[idx++] = i;
     }
 
     public AutoCollectorMachine(ItemGroup itemGroup, SlimefunItemStack item, RecipeType recipeType, 
@@ -113,19 +121,19 @@ public abstract class AutoCollectorMachine extends SlimefunItem {
             @Override
             public void onPlayerBreak(@NotNull BlockBreakEvent event, @NotNull ItemStack item, @NotNull java.util.List<ItemStack> drops) {
                 Block block = event.getBlock();
-                
+
                 // Stop collection task
                 stopCollection(block);
-                
+
                 // Remove owner
                 owners.remove(block.getLocation());
-                
-                // Drop stored items
+
+                // Drop ONLY stored items from storage slots (not border/control buttons)
                 BlockMenu menu = BlockStorage.getInventory(block);
                 if (menu != null) {
                     for (int slot : STORAGE_SLOTS) {
                         ItemStack stored = menu.getItemInSlot(slot);
-                        if (stored != null) {
+                        if (stored != null && !stored.getType().isAir()) {
                             block.getWorld().dropItemNaturally(block.getLocation(), stored);
                             menu.replaceExistingItem(slot, null);
                         }

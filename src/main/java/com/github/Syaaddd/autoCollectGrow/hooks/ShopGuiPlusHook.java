@@ -1,6 +1,7 @@
 package com.github.Syaaddd.autoCollectGrow.hooks;
 
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
@@ -39,7 +40,7 @@ public class ShopGuiPlusHook {
         try {
             // Try different API class names
             Class<?> apiClass = null;
-            
+
             // Try net.brcdev.shopgui.ShopGuiPlusApi first
             try {
                 apiClass = Class.forName("net.brcdev.shopgui.ShopGuiPlusApi");
@@ -57,11 +58,17 @@ public class ShopGuiPlusHook {
                 }
             }
 
-            // Try to find getItemPrice method
+            // Try to find getItemStackPriceSell method (takes Player and ItemStack)
             for (Method method : apiClass.getMethods()) {
-                if (method.getName().contains("getItemPrice") || method.getName().contains("getPrice")) {
-                    getItemPriceMethod = method;
-                    break;
+                if (method.getName().equals("getItemStackPriceSell")) {
+                    // Check if it has the correct signature (Player, ItemStack)
+                    Class<?>[] paramTypes = method.getParameterTypes();
+                    if (paramTypes.length == 2 && 
+                        paramTypes[0].getName().equals("org.bukkit.entity.Player") &&
+                        paramTypes[1].getName().equals("org.bukkit.inventory.ItemStack")) {
+                        getItemPriceMethod = method;
+                        break;
+                    }
                 }
             }
 
@@ -73,9 +80,14 @@ public class ShopGuiPlusHook {
                             apiInstance = method.invoke(null);
                             // Now find methods in the instance
                             for (Method m : apiInstance.getClass().getMethods()) {
-                                if (m.getName().contains("Price") || m.getName().contains("Sell")) {
-                                    getItemPriceMethod = m;
-                                    break;
+                                if (m.getName().equals("getItemStackPriceSell")) {
+                                    Class<?>[] paramTypes = m.getParameterTypes();
+                                    if (paramTypes.length == 2 && 
+                                        paramTypes[0].getName().equals("org.bukkit.entity.Player") &&
+                                        paramTypes[1].getName().equals("org.bukkit.inventory.ItemStack")) {
+                                        getItemPriceMethod = m;
+                                        break;
+                                    }
                                 }
                             }
                             break;
@@ -99,8 +111,11 @@ public class ShopGuiPlusHook {
 
     /**
      * Get the price of an item through ShopGUIPlus
+     * @param player The player selling the item (for price modifiers)
+     * @param item The item to get the price for
+     * @return The sell price of the item, or -1 if unavailable
      */
-    public double getItemPrice(ItemStack item) {
+    public double getItemPrice(Player player, ItemStack item) {
         if (!hooked) {
             return -1;
         }
@@ -109,11 +124,11 @@ public class ShopGuiPlusHook {
             if (getItemPriceMethod != null) {
                 Object result;
                 if (apiInstance != null) {
-                    result = getItemPriceMethod.invoke(apiInstance, item);
+                    result = getItemPriceMethod.invoke(apiInstance, player, item);
                 } else {
-                    result = getItemPriceMethod.invoke(null, item);
+                    result = getItemPriceMethod.invoke(null, player, item);
                 }
-                
+
                 if (result instanceof Double) {
                     return (Double) result;
                 } else if (result instanceof Number) {
