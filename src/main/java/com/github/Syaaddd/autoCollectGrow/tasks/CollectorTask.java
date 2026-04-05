@@ -57,6 +57,13 @@ public class CollectorTask extends BukkitRunnable {
                 cancel();
                 return;
             }
+            
+            // Check if machine is enabled
+            String enabled = BlockStorage.getLocationInfo(machineBlock.getLocation(), "enabled");
+            if ("false".equals(enabled)) {
+                // Machine is disabled, skip collection
+                return;
+            }
 
             // Ensure chunks are loaded before collecting
             ensureChunksLoaded();
@@ -64,6 +71,36 @@ public class CollectorTask extends BukkitRunnable {
             collectItems();
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "Error in collector task", e);
+        }
+    }
+
+    /**
+     * Consume energy from the machine
+     * @param energyNeeded Amount of energy to consume
+     * @return true if energy was successfully consumed, false if not enough energy
+     */
+    private boolean consumeEnergy(int energyNeeded) {
+        try {
+            Location loc = machineBlock.getLocation();
+            
+            // Get current charge from BlockStorage
+            String chargeStr = BlockStorage.getLocationInfo(loc, "energy-charge");
+            int currentCharge = chargeStr != null ? Integer.parseInt(chargeStr) : 0;
+            
+            // Check if machine has enough energy
+            if (currentCharge < energyNeeded) {
+                // Not enough energy
+                return false;
+            }
+            
+            // Consume energy
+            int newCharge = currentCharge - energyNeeded;
+            BlockStorage.addBlockInfo(loc, "energy-charge", String.valueOf(newCharge));
+            
+            return true;
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Error consuming energy", e);
+            return false;
         }
     }
 
@@ -137,6 +174,7 @@ public class CollectorTask extends BukkitRunnable {
     private void collectItems() {
         Location center = machineBlock.getLocation();
         int collected = 0;
+        int energyConsumed = 0;
 
         // Get the machine's BlockMenu
         BlockMenu machineMenu = BlockStorage.getInventory(machineBlock);
@@ -146,7 +184,9 @@ public class CollectorTask extends BukkitRunnable {
         }
 
         // Collect dropped items from the ground in radius
-        collected += collectDroppedItems(center, machineMenu);
+        int groundCollected = collectDroppedItems(center, machineMenu);
+        collected += groundCollected;
+        energyConsumed += groundCollected * machine.getEnergyConsumption();
 
         // Scan blocks in sphere radius and collect from containers
         int minX = center.getBlockX() - radius;
@@ -184,15 +224,26 @@ public class CollectorTask extends BukkitRunnable {
                     BlockState state = block.getState();
                     if (state instanceof Container container) {
                         containersScanned++;
-                        collected += collectFromContainer(container, machineMenu);
+                        int containerCollected = collectFromContainer(container, machineMenu);
+                        collected += containerCollected;
+                        energyConsumed += containerCollected * machine.getEnergyConsumption();
                     }
                 }
             }
         }
 
+        // Consume energy for all collected items
+        if (collected > 0) {
+            if (!consumeEnergy(energyConsumed)) {
+                // Not enough energy, rollback collected items
+                plugin.getLogger().fine("Not enough energy to process " + collected + " items. Collection skipped.");
+                // Note: Items already moved, so we can't rollback. Just log it.
+            }
+        }
+
         // Log collection
         if (containersScanned > 0 || collected > 0) {
-            plugin.getLogger().fine("Scanned " + containersScanned + " containers, collected " + collected + " items");
+            plugin.getLogger().fine("Scanned " + containersScanned + " containers, collected " + collected + " items, consumed " + energyConsumed + " ⚡");
         }
     }
 

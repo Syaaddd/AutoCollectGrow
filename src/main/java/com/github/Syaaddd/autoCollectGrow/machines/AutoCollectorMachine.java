@@ -7,9 +7,11 @@ import io.github.thebusybiscuit.slimefun4.api.items.ItemGroup;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItem;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
 import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
+import io.github.thebusybiscuit.slimefun4.core.attributes.EnergyNetProvider;
 import io.github.thebusybiscuit.slimefun4.core.handlers.BlockPlaceHandler;
 import io.github.thebusybiscuit.slimefun4.core.handlers.BlockBreakHandler;
 import io.github.thebusybiscuit.slimefun4.libraries.dough.items.CustomItemStack;
+import io.github.thebusybiscuit.slimefun4.utils.SlimefunUtils;
 import me.mrCookieSlime.Slimefun.api.BlockStorage;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenu;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenuPreset;
@@ -31,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Base class for all AutoCollector machines
  */
-public abstract class AutoCollectorMachine extends SlimefunItem {
+public abstract class AutoCollectorMachine extends SlimefunItem implements EnergyNetProvider {
 
     protected final int tier;
     protected final int radius;
@@ -94,6 +96,7 @@ public abstract class AutoCollectorMachine extends SlimefunItem {
                 BlockStorage.addBlockInfo(block, "tier", String.valueOf(tier));
                 BlockStorage.addBlockInfo(block, "radius", String.valueOf(radius));
                 BlockStorage.addBlockInfo(block, "auto-sell", "false");
+                BlockStorage.addBlockInfo(block, "enabled", "true"); // Machine starts enabled
                 
                 // Initialize storage slots
                 BlockMenu menu = BlockStorage.getInventory(block);
@@ -105,8 +108,9 @@ public abstract class AutoCollectorMachine extends SlimefunItem {
                 
                 // Start collection task
                 startCollection(block);
-                
-                player.sendMessage("§6[AutoCollect] §aAutoCollector placed! Starting collection...");
+
+                player.sendMessage("§6[AutoCollect] §aAutoCollector placed! Machine is now ACTIVE and collecting items!");
+                player.sendMessage("§6[AutoCollect] §eUse the power button in GUI to toggle on/off.");
             }
 
             public @NotNull String getName() {
@@ -222,6 +226,7 @@ public abstract class AutoCollectorMachine extends SlimefunItem {
     /**
      * Get energy capacity for this tier
      */
+    @Override
     public int getCapacity() {
         return tier * 1000;
     }
@@ -231,6 +236,14 @@ public abstract class AutoCollectorMachine extends SlimefunItem {
      */
     public int getEnergyConsumption() {
         return tier * 10;
+    }
+
+    /**
+     * Check if this machine is chargeable
+     */
+    @Override
+    public boolean isChargeable() {
+        return true;
     }
 
     /**

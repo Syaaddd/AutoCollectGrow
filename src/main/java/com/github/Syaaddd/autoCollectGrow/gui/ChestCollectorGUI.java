@@ -10,8 +10,10 @@ import me.mrCookieSlime.Slimefun.api.inventory.BlockMenu;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenuPreset;
 import me.mrCookieSlime.Slimefun.api.item_transport.ItemTransportFlow;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Particle;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -112,6 +114,35 @@ public class ChestCollectorGUI extends BlockMenuPreset {
     public void newInstance(@NotNull BlockMenu menu, @NotNull Block block) {
         // Update control buttons when GUI is opened
         updateControlButtons(menu, block);
+        
+        // Spawn ambient particles if machine is enabled
+        String machineStatus = BlockStorage.getLocationInfo(block.getLocation(), "enabled");
+        boolean isEnabled = !"false".equals(machineStatus);
+        if (isEnabled) {
+            spawnAmbientParticles(block.getLocation());
+        }
+    }
+
+    /**
+     * Spawn ambient particles around active machine
+     */
+    private void spawnAmbientParticles(Location location) {
+        // Spawn a few happy villager particles around the machine
+        Location center = location.clone().add(0.5, 1.0, 0.5);
+        for (int i = 0; i < 8; i++) {
+            double angle = (2 * Math.PI * i) / 8;
+            double x = Math.cos(angle) * 0.6;
+            double z = Math.sin(angle) * 0.6;
+            double y = 0.3 + (Math.random() * 0.5);
+            
+            location.getWorld().spawnParticle(
+                Particle.HAPPY_VILLAGER,
+                center.clone().add(x, y, z),
+                1,
+                0.1, 0.1, 0.1,
+                0.01
+            );
+        }
     }
 
     /**
@@ -156,6 +187,13 @@ public class ChestCollectorGUI extends BlockMenuPreset {
         // Info button
         String tier = BlockStorage.getLocationInfo(block.getLocation(), "tier");
         String radius = BlockStorage.getLocationInfo(block.getLocation(), "radius");
+        String machineStatus = BlockStorage.getLocationInfo(block.getLocation(), "enabled");
+        boolean machineEnabled = !"false".equals(machineStatus);
+        String energyCharge = BlockStorage.getLocationInfo(block.getLocation(), "energy-charge");
+        int charge = energyCharge != null ? Integer.parseInt(energyCharge) : 0;
+        int maxCapacity = machine.getCapacity();
+        int consumption = machine.getEnergyConsumption();
+        
         ItemStack infoButton = new CustomItemStack(
             Material.BOOK,
             "§b§lMachine Info",
@@ -164,36 +202,30 @@ public class ChestCollectorGUI extends BlockMenuPreset {
             "§7Radius: §e" + (radius != null ? radius : "?") + " blocks",
             "§7Stored Items: §e" + countStoredItems(menu),
             "",
+            "§7Status: " + (machineEnabled ? "§aActive" : "§cInactive"),
+            "§7Energy: §e" + charge + " / " + maxCapacity + " ⚡",
+            "§7Consumption: §e" + consumption + " ⚡/tick",
             "§7Auto-Sell: " + (autoSellEnabled ? "§aOn" : "§cOff")
         );
         menu.replaceExistingItem(INFO_SLOT, infoButton);
         menu.addMenuClickHandler(INFO_SLOT, (p, slot, item, action) -> false);
 
-        // Upgrade button
-        int tierNum = tier != null ? Integer.parseInt(tier) : 1;
-        if (tierNum < 4) {
-            ItemStack upgradeButton = new CustomItemStack(
-                Material.EXPERIENCE_BOTTLE,
-                "§a§lUpgrade to Tier " + (tierNum + 1),
-                "",
-                "§7Click to upgrade",
-                "§7Cost: Coming soon"
-            );
-            menu.replaceExistingItem(UPGRADE_SLOT, upgradeButton);
-            menu.addMenuClickHandler(UPGRADE_SLOT, (p, slot, item, action) -> {
-                p.sendMessage("§6[AutoCollect] §eUpgrade feature coming soon!");
-                return false;
-            });
-        } else {
-            ItemStack maxedButton = new CustomItemStack(
-                Material.NETHER_STAR,
-                "§d§lMAX TIER",
-                "",
-                "§7Maximum tier reached!"
-            );
-            menu.replaceExistingItem(UPGRADE_SLOT, maxedButton);
-            menu.addMenuClickHandler(UPGRADE_SLOT, (p, slot, item, action) -> false);
-        }
+        // Machine ON/OFF toggle button (replaces upgrade button)
+        ItemStack powerButton = new CustomItemStack(
+            machineEnabled ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK,
+            machineEnabled ? "§a§lMACHINE: ON" : "§c§lMACHINE: OFF",
+            "",
+            "§7Click to toggle machine power",
+            "",
+            machineEnabled ? "§e● Currently Active" : "§8○ Currently Inactive",
+            "§7Collecting items: " + (machineEnabled ? "§aYes" : "§cNo")
+        );
+        menu.replaceExistingItem(UPGRADE_SLOT, powerButton);
+        menu.addMenuClickHandler(UPGRADE_SLOT, (p, slot, item, action) -> {
+            toggleMachinePower(p, block);
+            menu.reload();
+            return false;
+        });
 
         // History button
         ItemStack historyButton = new CustomItemStack(
@@ -281,6 +313,72 @@ public class ChestCollectorGUI extends BlockMenuPreset {
             }
         } else {
             player.sendMessage("§6[AutoCollect] §cFailed to deposit money!");
+        }
+    }
+
+    /**
+     * Toggle machine power (on/off)
+     */
+    private void toggleMachinePower(Player player, Block block) {
+        String currentStatus = BlockStorage.getLocationInfo(block.getLocation(), "enabled");
+        boolean enabled = !"false".equals(currentStatus); // Default to enabled
+
+        BlockStorage.addBlockInfo(block, "enabled", String.valueOf(!enabled));
+
+        AutoCollectGrow plugin = AutoCollectGrow.getInstance();
+        if (enabled) {
+            // Machine turned OFF
+            player.sendMessage("§6[AutoCollect] §cMachine turned OFF! Collection stopped.");
+            
+            // Stop the collector task
+            machine.stopCollection(block);
+            
+            // Spawn redstone particles (off effect)
+            spawnPowerParticles(block.getLocation(), false);
+        } else {
+            // Machine turned ON
+            player.sendMessage("§6[AutoCollect] §aMachine turned ON! Collection started.");
+            
+            // Start the collector task
+            machine.startCollection(block);
+            
+            // Spawn emerald particles (on effect)
+            spawnPowerParticles(block.getLocation(), true);
+        }
+    }
+
+    /**
+     * Spawn power particles around the machine
+     */
+    private void spawnPowerParticles(Location location, boolean isOn) {
+        Particle particle = isOn ? Particle.HAPPY_VILLAGER : Particle.SMOKE;
+        Location particleLoc = location.clone().add(0.5, 1.2, 0.5);
+        
+        // Spawn particles in a circle around the block
+        for (int i = 0; i < 20; i++) {
+            double angle = (2 * Math.PI * i) / 20;
+            double x = Math.cos(angle) * 0.8;
+            double z = Math.sin(angle) * 0.8;
+            
+            Location spawnLoc = particleLoc.clone().add(x, 0, z);
+            location.getWorld().spawnParticle(
+                particle,
+                spawnLoc,
+                1,
+                0.1, 0.1, 0.1,
+                0.02
+            );
+        }
+        
+        // Spawn vertical particles
+        for (int i = 0; i < 10; i++) {
+            location.getWorld().spawnParticle(
+                particle,
+                particleLoc.clone().add(0, i * 0.15, 0),
+                1,
+                0.2, 0.1, 0.2,
+                0.02
+            );
         }
     }
 
