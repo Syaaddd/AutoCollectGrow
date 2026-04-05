@@ -64,6 +64,14 @@ public class CollectorTask extends BukkitRunnable {
                 // Machine is disabled, skip collection
                 return;
             }
+            
+            // Consume base energy every tick (machine running cost)
+            int baseEnergy = machine.getEnergyConsumption();
+            if (!consumeEnergy(baseEnergy)) {
+                // Not enough energy, skip this tick
+                plugin.getLogger().fine("Not enough energy to run machine. Skipping tick.");
+                return;
+            }
 
             // Ensure chunks are loaded before collecting
             ensureChunksLoaded();
@@ -174,7 +182,6 @@ public class CollectorTask extends BukkitRunnable {
     private void collectItems() {
         Location center = machineBlock.getLocation();
         int collected = 0;
-        int energyConsumed = 0;
 
         // Get the machine's BlockMenu
         BlockMenu machineMenu = BlockStorage.getInventory(machineBlock);
@@ -184,9 +191,7 @@ public class CollectorTask extends BukkitRunnable {
         }
 
         // Collect dropped items from the ground in radius
-        int groundCollected = collectDroppedItems(center, machineMenu);
-        collected += groundCollected;
-        energyConsumed += groundCollected * machine.getEnergyConsumption();
+        collected += collectDroppedItems(center, machineMenu);
 
         // Scan blocks in sphere radius and collect from containers
         int minX = center.getBlockX() - radius;
@@ -224,26 +229,15 @@ public class CollectorTask extends BukkitRunnable {
                     BlockState state = block.getState();
                     if (state instanceof Container container) {
                         containersScanned++;
-                        int containerCollected = collectFromContainer(container, machineMenu);
-                        collected += containerCollected;
-                        energyConsumed += containerCollected * machine.getEnergyConsumption();
+                        collected += collectFromContainer(container, machineMenu);
                     }
                 }
             }
         }
 
-        // Consume energy for all collected items
-        if (collected > 0) {
-            if (!consumeEnergy(energyConsumed)) {
-                // Not enough energy, rollback collected items
-                plugin.getLogger().fine("Not enough energy to process " + collected + " items. Collection skipped.");
-                // Note: Items already moved, so we can't rollback. Just log it.
-            }
-        }
-
-        // Log collection
+        // Log collection (energy consumed per tick is logged separately)
         if (containersScanned > 0 || collected > 0) {
-            plugin.getLogger().fine("Scanned " + containersScanned + " containers, collected " + collected + " items, consumed " + energyConsumed + " ⚡");
+            plugin.getLogger().fine("Scanned " + containersScanned + " containers, collected " + collected + " items");
         }
     }
 
