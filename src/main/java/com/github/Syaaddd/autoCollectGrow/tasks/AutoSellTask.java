@@ -10,6 +10,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -32,13 +33,19 @@ public class AutoSellTask extends BukkitRunnable {
         try {
             ShopGuiPlusHook shopHook = plugin.getShopGuiPlusHook();
             if (shopHook == null || !shopHook.isHooked()) {
-                plugin.getLogger().warning("[AutoSell] ShopGuiPlus not available!");
                 return;
             }
 
             VaultHook vaultHook = plugin.getVaultHook();
             if (vaultHook == null || !vaultHook.isHooked()) {
-                plugin.getLogger().warning("[AutoSell] Vault not available!");
+                return;
+            }
+
+            // ShopGUIPlus REQUIRES a Player object for permission checks
+            // Skip auto-sell if no players are online
+            Player referencePlayer = findOnlinePlayer();
+            if (referencePlayer == null) {
+                plugin.getLogger().fine("[AutoSell] No players online - skipping auto-sell (ShopGUIPlus requires online player for pricing)");
                 return;
             }
 
@@ -79,13 +86,13 @@ public class AutoSellTask extends BukkitRunnable {
                     continue;
                 }
 
+                OfflinePlayer owner = Bukkit.getOfflinePlayer(ownerUUID);
                 BlockMenu menu = BlockStorage.getInventory(block);
                 if (menu == null) {
                     continue;
                 }
 
-                OfflinePlayer owner = Bukkit.getOfflinePlayer(ownerUUID);
-                int itemsSold = sellItemsFromMachine(menu, AutoCollectorMachine.STORAGE_SLOTS, shopHook, vaultHook, owner, loc);
+                int itemsSold = sellItemsFromMachine(menu, AutoCollectorMachine.STORAGE_SLOTS, shopHook, vaultHook, owner, loc, referencePlayer);
                 
                 if (itemsSold > 0) {
                     totalItemsSold += itemsSold;
@@ -105,10 +112,20 @@ public class AutoSellTask extends BukkitRunnable {
     }
 
     /**
+     * Find any online player to use as reference for ShopGUIPlus pricing
+     */
+    private Player findOnlinePlayer() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            return player; // Just return the first online player
+        }
+        return null; // No players online
+    }
+
+    /**
      * Sell items from a specific machine
      * @return Number of items sold
      */
-    private int sellItemsFromMachine(BlockMenu menu, int[] storageSlots, ShopGuiPlusHook shopHook, VaultHook vaultHook, OfflinePlayer owner, Location loc) {
+    private int sellItemsFromMachine(BlockMenu menu, int[] storageSlots, ShopGuiPlusHook shopHook, VaultHook vaultHook, OfflinePlayer owner, Location loc, Player referencePlayer) {
         int itemsSold = 0;
         double totalValue = 0;
 
@@ -119,7 +136,7 @@ public class AutoSellTask extends BukkitRunnable {
                     continue;
                 }
 
-                double price = shopHook.getItemPrice(null, item);
+                double price = shopHook.getItemPrice(referencePlayer, item);
                 if (price > 0) {
                     totalValue += price * item.getAmount();
                     itemsSold += item.getAmount();
@@ -129,8 +146,8 @@ public class AutoSellTask extends BukkitRunnable {
 
             if (itemsSold > 0 && totalValue > 0) {
                 vaultHook.depositMoney(owner, totalValue);
-                plugin.getLogger().fine("Auto-sold " + itemsSold + " items from machine at " + 
-                    loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() + 
+                plugin.getLogger().fine("Auto-sold " + itemsSold + " items from machine at " +
+                    loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ() +
                     " for $" + String.format("%.2f", totalValue));
             }
         } catch (Exception e) {

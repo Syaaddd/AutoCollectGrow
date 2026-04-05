@@ -45,6 +45,8 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
     
     // Track active collectors: location -> task
     private static final Map<Location, CollectorTask> activeCollectors = new ConcurrentHashMap<>();
+    // Track owners: location -> player UUID
+    private static final Map<Location, UUID> owners = new ConcurrentHashMap<>();
     // Track all placed machines for auto-sell (using string key: world:x:y:z)
     private static final Map<String, Location> allMachines = new ConcurrentHashMap<>();
 
