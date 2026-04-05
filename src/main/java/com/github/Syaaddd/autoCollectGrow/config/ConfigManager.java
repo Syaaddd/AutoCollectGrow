@@ -21,7 +21,7 @@ public class ConfigManager {
     private final Map<String, Integer> tierRadius = new HashMap<>();
     private int scanIntervalTicks;
     private boolean autoSellEnabled;
-    private int autoSellIntervalMinutes;
+    private int autoSellIntervalSeconds;
     private List<String> itemWhitelist;
     private List<String> itemBlacklist;
     private boolean enableSellHistory;
@@ -44,7 +44,7 @@ public class ConfigManager {
         // Default settings
         scanIntervalTicks = 100; // 5 seconds
         autoSellEnabled = false;
-        autoSellIntervalMinutes = 30;
+        autoSellIntervalSeconds = 300; // 5 minutes
         enableSellHistory = true;
         maxSellHistorySize = 50;
         enableSounds = true;
@@ -85,7 +85,7 @@ public class ConfigManager {
         
         // Auto-sell settings
         autoSellEnabled = config.getBoolean("settings.auto-sell.enabled", autoSellEnabled);
-        autoSellIntervalMinutes = config.getInt("settings.auto-sell.interval-minutes", autoSellIntervalMinutes);
+        autoSellIntervalSeconds = config.getInt("settings.auto-sell.interval-seconds", autoSellIntervalSeconds);
         
         // Item filters
         itemWhitelist = config.getStringList("settings.item-whitelist");
@@ -121,8 +121,8 @@ public class ConfigManager {
         return autoSellEnabled;
     }
 
-    public int getAutoSellIntervalMinutes() {
-        return autoSellIntervalMinutes;
+    public int getAutoSellIntervalSeconds() {
+        return autoSellIntervalSeconds;
     }
 
     public List<String> getItemWhitelist() {

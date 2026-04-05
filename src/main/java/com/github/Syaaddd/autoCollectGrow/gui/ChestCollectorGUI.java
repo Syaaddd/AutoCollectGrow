@@ -170,12 +170,23 @@ public class ChestCollectorGUI extends BlockMenuPreset {
         // Auto-Sell toggle button
         String autoSellStatus = BlockStorage.getLocationInfo(block.getLocation(), "auto-sell");
         boolean autoSellEnabled = "true".equals(autoSellStatus);
+        
+        // Calculate display interval (show in minutes if >= 60, otherwise in seconds)
+        int intervalSeconds = plugin.getConfigManager().getAutoSellIntervalSeconds();
+        String intervalDisplay;
+        if (intervalSeconds >= 60) {
+            int minutes = intervalSeconds / 60;
+            intervalDisplay = minutes + " min";
+        } else {
+            intervalDisplay = intervalSeconds + " sec";
+        }
+        
         ItemStack autoSellButton = new CustomItemStack(
             autoSellEnabled ? Material.LIME_DYE : Material.RED_DYE,
             "§eAuto-Sell: " + (autoSellEnabled ? "§aEnabled" : "§cDisabled"),
             "",
             "§7Click to toggle auto-sell",
-            "§7Current: §e" + plugin.getConfigManager().getAutoSellIntervalMinutes() + " min"
+            "§7Interval: §e" + intervalDisplay
         );
         menu.replaceExistingItem(AUTO_SELL_SLOT, autoSellButton);
         menu.addMenuClickHandler(AUTO_SELL_SLOT, (p, slot, item, action) -> {
@@ -393,8 +404,15 @@ public class ChestCollectorGUI extends BlockMenuPreset {
         
         AutoCollectGrow plugin = AutoCollectGrow.getInstance();
         if (!enabled) {
-            player.sendMessage("§6[AutoCollect] §aAuto-sell enabled! Selling every " + 
-                plugin.getConfigManager().getAutoSellIntervalMinutes() + " minutes.");
+            int intervalSeconds = plugin.getConfigManager().getAutoSellIntervalSeconds();
+            String intervalDisplay;
+            if (intervalSeconds >= 60) {
+                int minutes = intervalSeconds / 60;
+                intervalDisplay = minutes + " minute" + (minutes > 1 ? "s" : "");
+            } else {
+                intervalDisplay = intervalSeconds + " seconds";
+            }
+            player.sendMessage("§6[AutoCollect] §aAuto-sell enabled! Selling every " + intervalDisplay + ".");
         } else {
             player.sendMessage("§6[AutoCollect] §cAuto-sell disabled.");
         }

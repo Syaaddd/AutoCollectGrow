@@ -45,10 +45,12 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
     private static final Map<Location, CollectorTask> activeCollectors = new ConcurrentHashMap<>();
     // Track owners: location -> player UUID
     private static final Map<Location, UUID> owners = new ConcurrentHashMap<>();
+    // Track all placed machines for auto-sell
+    private static final Set<Location> allMachines = ConcurrentHashMap.newKeySet();
 
     // Storage slots (middle area excluding borders and control buttons)
     // Rows 2-5: slots 10-16, 19-25, 28-34, 37-43 (7 slots x 4 rows = 28 slots)
-    protected static final int[] STORAGE_SLOTS;
+    public static final int[] STORAGE_SLOTS;
     static {
         STORAGE_SLOTS = new int[28];
         int idx = 0;
@@ -115,6 +117,9 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
                 // Start collection task
                 startCollection(block);
 
+                // Register machine for auto-sell
+                allMachines.add(block.getLocation());
+
                 player.sendMessage("§6[AutoCollect] §aAutoCollector placed! Machine is now ACTIVE and collecting items!");
                 player.sendMessage("§6[AutoCollect] §eUse the power button in GUI to toggle on/off.");
             }
@@ -134,6 +139,9 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
 
                 // Stop collection task
                 stopCollection(block);
+
+                // Unregister machine from auto-sell
+                allMachines.remove(block.getLocation());
 
                 // Remove owner
                 owners.remove(block.getLocation());
@@ -313,5 +321,12 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
      */
     public int[] getStorageSlots() {
         return STORAGE_SLOTS;
+    }
+
+    /**
+     * Get all registered machines
+     */
+    public static Set<Location> getAllMachines() {
+        return allMachines;
     }
 }

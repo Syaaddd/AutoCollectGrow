@@ -32,8 +32,10 @@ settings:
   auto-sell:
     # Enable automatic selling at regular intervals
     enabled: false
-    # Interval in minutes for auto-sell
-    interval-minutes: 30
+    # Interval in seconds for auto-sell
+    # Recommended: 300 (5 min) to 1800 (30 min)
+    # Minimum: 60 seconds (1 min)
+    interval-seconds: 300
 
   # =====================================================
   # Item Filters

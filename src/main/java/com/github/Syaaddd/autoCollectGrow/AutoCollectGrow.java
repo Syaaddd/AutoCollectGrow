@@ -8,6 +8,7 @@ import com.github.Syaaddd.autoCollectGrow.items.AutoCollectorTier1;
 import com.github.Syaaddd.autoCollectGrow.items.AutoCollectorTier2;
 import com.github.Syaaddd.autoCollectGrow.items.AutoCollectorTier3;
 import com.github.Syaaddd.autoCollectGrow.items.AutoCollectorTier4;
+import com.github.Syaaddd.autoCollectGrow.tasks.AutoSellTask;
 import io.github.thebusybiscuit.slimefun4.api.SlimefunAddon;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -23,6 +24,7 @@ public final class AutoCollectGrow extends JavaPlugin implements SlimefunAddon {
     private VaultHook vaultHook;
     private ShopGuiPlusHook shopGuiPlusHook;
     private PlaceholderAPIHook placeholderAPIHook;
+    private AutoSellTask autoSellTask;
 
     @Override
     public void onEnable() {
@@ -52,6 +54,9 @@ public final class AutoCollectGrow extends JavaPlugin implements SlimefunAddon {
 
         // Register Slimefun items
         registerItems();
+
+        // Start auto-sell task
+        startAutoSellTask();
 
         // Setup bStats metrics
         setupMetrics();
@@ -123,6 +128,14 @@ public final class AutoCollectGrow extends JavaPlugin implements SlimefunAddon {
         }
     }
 
+    private void startAutoSellTask() {
+        autoSellTask = new AutoSellTask(this);
+        // Convert seconds to ticks (20 ticks = 1 second)
+        long intervalTicks = configManager.getAutoSellIntervalSeconds() * 20L;
+        autoSellTask.runTaskTimer(this, intervalTicks, intervalTicks);
+        getLogger().info("Auto-sell task scheduled every " + configManager.getAutoSellIntervalSeconds() + " seconds.");
+    }
+
     private void setupMetrics() {
         int pluginId = 22222; // Replace with actual bStats plugin ID
         Metrics metrics = new Metrics(this, pluginId);
@@ -158,5 +171,9 @@ public final class AutoCollectGrow extends JavaPlugin implements SlimefunAddon {
 
     public ShopGuiPlusHook getShopGuiPlusHook() {
         return shopGuiPlusHook;
+    }
+
+    public AutoSellTask getAutoSellTask() {
+        return autoSellTask;
     }
 }
