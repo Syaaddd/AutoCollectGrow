@@ -28,8 +28,10 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,10 +45,8 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
     
     // Track active collectors: location -> task
     private static final Map<Location, CollectorTask> activeCollectors = new ConcurrentHashMap<>();
-    // Track owners: location -> player UUID
-    private static final Map<Location, UUID> owners = new ConcurrentHashMap<>();
-    // Track all placed machines for auto-sell
-    private static final Set<Location> allMachines = ConcurrentHashMap.newKeySet();
+    // Track all placed machines for auto-sell (using string key: world:x:y:z)
+    private static final Map<String, Location> allMachines = new ConcurrentHashMap<>();
 
     // Storage slots (middle area excluding borders and control buttons)
     // Rows 2-5: slots 10-16, 19-25, 28-34, 37-43 (7 slots x 4 rows = 28 slots)
@@ -118,7 +118,7 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
                 startCollection(block);
 
                 // Register machine for auto-sell
-                allMachines.add(block.getLocation());
+                allMachines.put(locationToString(block.getLocation()), block.getLocation());
 
                 player.sendMessage("§6[AutoCollect] §aAutoCollector placed! Machine is now ACTIVE and collecting items!");
                 player.sendMessage("§6[AutoCollect] §eUse the power button in GUI to toggle on/off.");
@@ -141,7 +141,7 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
                 stopCollection(block);
 
                 // Unregister machine from auto-sell
-                allMachines.remove(block.getLocation());
+                allMachines.remove(locationToString(block.getLocation()));
 
                 // Remove owner
                 owners.remove(block.getLocation());
@@ -326,7 +326,14 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
     /**
      * Get all registered machines
      */
-    public static Set<Location> getAllMachines() {
-        return allMachines;
+    public static Collection<Location> getAllMachines() {
+        return allMachines.values();
+    }
+
+    /**
+     * Convert location to string key for registry
+     */
+    private static String locationToString(Location loc) {
+        return loc.getWorld().getName() + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
     }
 }

@@ -320,7 +320,11 @@ public class ChestCollectorGUI extends BlockMenuPreset {
             
             // Play sound
             if (plugin.getConfigManager().isSoundsEnabled()) {
-                player.playSound(player.getLocation(), "ENTITY_VILLAGER_YES", 1.0f, 1.0f);
+                try {
+                    player.playSound(player.getLocation(), "entity.villager.yes", 1.0f, 1.0f);
+                } catch (Exception e) {
+                    // ignore sound errors
+                }
             }
         } else {
             player.sendMessage("§6[AutoCollect] §cFailed to deposit money!");

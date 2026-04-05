@@ -92,9 +92,11 @@ messages:
 # =====================================================
 # Sounds
 # =====================================================
+# Note: Sound NAMES must be lowercase with dots (Minecraft 1.21+)
+# Examples: "entity.villager.yes", "entity.experience_orb.pickup"
 sounds:
-  collection-start: "ENTITY_EXPERIENCE_ORB_PICKUP"
-  collection-finish: "ENTITY_PLAYER_LEVELUP"
-  sell-success: "ENTITY_VILLAGER_YES"
-  sell-failed: "ENTITY_VILLAGER_NO"
-  upgrade: "BLOCK_ANVIL_USE"
+  collection-start: "entity.experience_orb.pickup"
+  collection-finish: "entity.player.levelup"
+  sell-success: "entity.villager.yes"
+  sell-failed: "entity.villager.no"
+  upgrade: "block.anvil.use"

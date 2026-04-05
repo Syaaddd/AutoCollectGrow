@@ -32,17 +32,18 @@ public class AutoSellTask extends BukkitRunnable {
         try {
             ShopGuiPlusHook shopHook = plugin.getShopGuiPlusHook();
             if (shopHook == null || !shopHook.isHooked()) {
+                plugin.getLogger().warning("[AutoSell] ShopGuiPlus not available!");
                 return;
             }
 
             VaultHook vaultHook = plugin.getVaultHook();
             if (vaultHook == null || !vaultHook.isHooked()) {
+                plugin.getLogger().warning("[AutoSell] Vault not available!");
                 return;
             }
 
             int machinesProcessed = 0;
             int totalItemsSold = 0;
-            double totalValueEarned = 0;
 
             // Iterate through all registered machines
             for (Location loc : AutoCollectorMachine.getAllMachines()) {
@@ -53,7 +54,7 @@ public class AutoSellTask extends BukkitRunnable {
                     continue;
                 }
 
-                // Check if this machine has auto-sell enabled
+                // Check if auto-sell is enabled
                 String autoSellStatus = BlockStorage.getLocationInfo(loc, "auto-sell");
                 if (!"true".equals(autoSellStatus)) {
                     continue;
@@ -78,25 +79,28 @@ public class AutoSellTask extends BukkitRunnable {
                     continue;
                 }
 
-                OfflinePlayer owner = Bukkit.getOfflinePlayer(ownerUUID);
                 BlockMenu menu = BlockStorage.getInventory(block);
                 if (menu == null) {
                     continue;
                 }
 
-                // Sell items
+                OfflinePlayer owner = Bukkit.getOfflinePlayer(ownerUUID);
                 int itemsSold = sellItemsFromMachine(menu, AutoCollectorMachine.STORAGE_SLOTS, shopHook, vaultHook, owner, loc);
                 
-                machinesProcessed++;
-                totalItemsSold += itemsSold;
+                if (itemsSold > 0) {
+                    totalItemsSold += itemsSold;
+                    machinesProcessed++;
+                    plugin.getLogger().info("[AutoSell] Sold " + itemsSold + " items from machine at " + 
+                        loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ());
+                }
             }
 
             // Log summary
-            if (machinesProcessed > 0 && totalItemsSold > 0) {
-                plugin.getLogger().info("[AutoSell] Processed " + machinesProcessed + " machines, sold " + totalItemsSold + " items");
+            if (machinesProcessed > 0) {
+                plugin.getLogger().info("[AutoSell] Task completed - Processed " + machinesProcessed + " machines, sold " + totalItemsSold + " items total");
             }
         } catch (Exception e) {
-            plugin.getLogger().log(Level.WARNING, "Error in auto-sell task", e);
+            plugin.getLogger().log(Level.WARNING, "[AutoSell] Error in auto-sell task", e);
         }
     }
 
