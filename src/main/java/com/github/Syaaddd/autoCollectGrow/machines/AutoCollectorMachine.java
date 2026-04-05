@@ -18,6 +18,9 @@ import me.mrCookieSlime.Slimefun.api.inventory.BlockMenuPreset;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.Chest;
+import org.bukkit.block.data.type.Chest.Type;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -97,7 +100,10 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
                 BlockStorage.addBlockInfo(block, "radius", String.valueOf(radius));
                 BlockStorage.addBlockInfo(block, "auto-sell", "false");
                 BlockStorage.addBlockInfo(block, "enabled", "true"); // Machine starts enabled
-                
+
+                // Prevent chest from merging with adjacent chests
+                preventChestMerge(block);
+
                 // Initialize storage slots
                 BlockMenu menu = BlockStorage.getInventory(block);
                 if (menu != null) {
@@ -145,6 +151,49 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
                 }
             }
         };
+    }
+
+    /**
+     * Prevent this chest from merging with adjacent chests
+     * Sets chest type to SINGLE to avoid double chest formation
+     */
+    private void preventChestMerge(Block block) {
+        try {
+            // Only apply to chest blocks
+            if (!(block.getBlockData() instanceof org.bukkit.block.data.type.Chest chestData)) {
+                return;
+            }
+
+            // Check all adjacent blocks for chests
+            BlockFace[] faces = {BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST};
+            
+            for (BlockFace face : faces) {
+                Block adjacentBlock = block.getRelative(face);
+                if (adjacentBlock.getBlockData() instanceof org.bukkit.block.data.type.Chest adjacentChestData) {
+                    // If adjacent chest is also AutoCollector (same type), prevent merge
+                    String adjacentBlockId = BlockStorage.getLocationInfo(adjacentBlock.getLocation(), "id");
+                    String currentBlockId = BlockStorage.getLocationInfo(block.getLocation(), "id");
+                    
+                    if (currentBlockId != null && currentBlockId.equals(adjacentBlockId)) {
+                        // Both are AutoCollectors - set both to SINGLE type
+                        chestData.setType(Type.SINGLE);
+                        block.setBlockData(chestData, false);
+                        
+                        adjacentChestData.setType(Type.SINGLE);
+                        adjacentBlock.setBlockData(adjacentChestData, false);
+                    }
+                }
+            }
+
+            // Always set current chest to SINGLE type
+            if (block.getBlockData() instanceof org.bukkit.block.data.type.Chest currentChestData) {
+                currentChestData.setType(Type.SINGLE);
+                block.setBlockData(currentChestData, false);
+            }
+        } catch (Exception e) {
+            // Ignore errors - chest merge prevention is optional
+            AutoCollectGrow.getInstance().getLogger().fine("Could not prevent chest merge: " + e.getMessage());
+        }
     }
 
     /**
