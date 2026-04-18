@@ -28,6 +28,7 @@ public class ConfigManager {
     private int maxSellHistorySize;
     private boolean enableSounds;
     private boolean enableMessages;
+    private boolean sellSlimefunItems;
 
     public ConfigManager(AutoCollectGrow plugin) {
         this.plugin = plugin;
@@ -49,6 +50,7 @@ public class ConfigManager {
         maxSellHistorySize = 50;
         enableSounds = true;
         enableMessages = true;
+        sellSlimefunItems = false; // Protect Slimefun items by default
 
         // Default item lists
         itemWhitelist = List.of("*"); // All items by default
@@ -98,6 +100,9 @@ public class ConfigManager {
         // Client settings
         enableSounds = config.getBoolean("settings.client.sounds", enableSounds);
         enableMessages = config.getBoolean("settings.client.messages", enableMessages);
+
+        // Selling settings
+        sellSlimefunItems = config.getBoolean("settings.selling.sell-slimefun-items", sellSlimefunItems);
     }
 
     public void saveConfig() {
@@ -164,7 +169,12 @@ public class ConfigManager {
         if (itemWhitelist.contains("*")) {
             return true;
         }
-        
+
         return itemWhitelist.contains(materialName);
+    }
+
+    // Check if Slimefun items can be sold
+    public boolean canSellSlimefunItems() {
+        return sellSlimefunItems;
     }
 }

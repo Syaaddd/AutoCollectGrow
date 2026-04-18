@@ -4,6 +4,7 @@ import com.github.Syaaddd.autoCollectGrow.AutoCollectGrow;
 import com.github.Syaaddd.autoCollectGrow.hooks.ShopGuiPlusHook;
 import com.github.Syaaddd.autoCollectGrow.hooks.VaultHook;
 import com.github.Syaaddd.autoCollectGrow.machines.AutoCollectorMachine;
+import com.github.Syaaddd.autoCollectGrow.utils.ItemUtils;
 import io.github.thebusybiscuit.slimefun4.libraries.dough.items.CustomItemStack;
 import me.mrCookieSlime.Slimefun.api.BlockStorage;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenu;
@@ -292,10 +293,20 @@ public class ChestCollectorGUI extends BlockMenuPreset {
         // Calculate total value and sell items
         double totalValue = 0;
         int itemsSold = 0;
+        int slimefunItemsSkipped = 0;
+        boolean protectSlimefunItems = !plugin.getConfigManager().canSellSlimefunItems();
 
         for (int slot : machine.getStorageSlots()) {
             ItemStack item = menu.getItemInSlot(slot);
             if (item == null || item.getType().isAir()) {
+                continue;
+            }
+
+            // Skip Slimefun items if protection is enabled (default)
+            if (protectSlimefunItems && ItemUtils.isSlimefunItem(item)) {
+                slimefunItemsSkipped += item.getAmount();
+                plugin.getLogger().fine("[Sell] Skipped Slimefun item: " + ItemUtils.getSlimefunItemId(item) + 
+                    " (amount: " + item.getAmount() + ") at slot " + slot);
                 continue;
             }
 
@@ -308,16 +319,26 @@ public class ChestCollectorGUI extends BlockMenuPreset {
             }
         }
 
+        // Inform player about skipped Slimefun items
+        if (slimefunItemsSkipped > 0) {
+            player.sendMessage("§6[AutoCollect] §eSkipped " + slimefunItemsSkipped + 
+                " Slimefun item(s) - these are protected!");
+        }
+
         if (totalValue <= 0 || itemsSold == 0) {
-            player.sendMessage("§6[AutoCollect] §cNo items to sell! Put items in storage first.");
+            if (slimefunItemsSkipped == 0) {
+                player.sendMessage("§6[AutoCollect] §cNo items to sell! Put items in storage first.");
+            } else {
+                player.sendMessage("§6[AutoCollect] §eOnly Slimefun items in storage - nothing to sell.");
+            }
             return;
         }
 
         // Deposit money to owner
         if (vaultHook.depositMoney(owner, totalValue)) {
-            player.sendMessage("§6[AutoCollect] §aSold " + itemsSold + " items for " + 
+            player.sendMessage("§6[AutoCollect] §aSold " + itemsSold + " items for " +
                 vaultHook.formatMoney(totalValue) + "!");
-            
+
             // Play sound
             if (plugin.getConfigManager().isSoundsEnabled()) {
                 try {

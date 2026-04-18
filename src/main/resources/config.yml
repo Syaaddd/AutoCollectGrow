@@ -27,6 +27,16 @@ settings:
     tier4: 50
 
   # =====================================================
+  # Selling Settings
+  # =====================================================
+  selling:
+    # Whether Slimefun items can be sold through the AutoCollector
+    # When false (recommended), Slimefun items are protected and will NOT be sold
+    # This prevents accidental loss of valuable Slimefun items
+    # Default: false (protected)
+    sell-slimefun-items: false
+
+  # =====================================================
   # Auto-Sell Settings
   # =====================================================
   auto-sell:

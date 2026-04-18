@@ -4,6 +4,7 @@ import com.github.Syaaddd.autoCollectGrow.AutoCollectGrow;
 import com.github.Syaaddd.autoCollectGrow.hooks.ShopGuiPlusHook;
 import com.github.Syaaddd.autoCollectGrow.hooks.VaultHook;
 import com.github.Syaaddd.autoCollectGrow.machines.AutoCollectorMachine;
+import com.github.Syaaddd.autoCollectGrow.utils.ItemUtils;
 import me.mrCookieSlime.Slimefun.api.BlockStorage;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenu;
 import org.bukkit.Bukkit;
@@ -127,7 +128,9 @@ public class AutoSellTask extends BukkitRunnable {
      */
     private int sellItemsFromMachine(BlockMenu menu, int[] storageSlots, ShopGuiPlusHook shopHook, VaultHook vaultHook, OfflinePlayer owner, Location loc, Player referencePlayer) {
         int itemsSold = 0;
+        int slimefunItemsSkipped = 0;
         double totalValue = 0;
+        boolean protectSlimefunItems = !plugin.getConfigManager().canSellSlimefunItems();
 
         try {
             for (int slot : storageSlots) {
@@ -136,12 +139,28 @@ public class AutoSellTask extends BukkitRunnable {
                     continue;
                 }
 
-                double price = shopHook.getItemPrice(referencePlayer, item);
-                if (price > 0) {
-                    totalValue += price * item.getAmount();
+                // Skip Slimefun items if protection is enabled (default)
+                if (protectSlimefunItems && ItemUtils.isSlimefunItem(item)) {
+                    slimefunItemsSkipped += item.getAmount();
+                    plugin.getLogger().fine("[AutoSell] Skipped Slimefun item: " + ItemUtils.getSlimefunItemId(item) + 
+                        " (amount: " + item.getAmount() + ") at slot " + slot);
+                    continue;
+                }
+
+                // getItemPrice returns the unit price (for 1 item).
+                // Multiply by amount to get the total for this slot, same as /sell hand.
+                double unitPrice = shopHook.getItemPrice(referencePlayer, item);
+                if (unitPrice > 0) {
+                    totalValue += unitPrice * item.getAmount();
                     itemsSold += item.getAmount();
                     menu.replaceExistingItem(slot, null);
                 }
+            }
+
+            // Log skipped Slimefun items
+            if (slimefunItemsSkipped > 0) {
+                plugin.getLogger().info("[AutoSell] Skipped " + slimefunItemsSkipped + 
+                    " Slimefun item(s) from machine at " + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ());
             }
 
             if (itemsSold > 0 && totalValue > 0) {

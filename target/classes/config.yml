@@ -27,13 +27,25 @@ settings:
     tier4: 50
 
   # =====================================================
+  # Selling Settings
+  # =====================================================
+  selling:
+    # Whether Slimefun items can be sold through the AutoCollector
+    # When false (recommended), Slimefun items are protected and will NOT be sold
+    # This prevents accidental loss of valuable Slimefun items
+    # Default: false (protected)
+    sell-slimefun-items: false
+
+  # =====================================================
   # Auto-Sell Settings
   # =====================================================
   auto-sell:
     # Enable automatic selling at regular intervals
     enabled: false
-    # Interval in minutes for auto-sell
-    interval-minutes: 30
+    # Interval in seconds for auto-sell
+    # Recommended: 300 (5 min) to 1800 (30 min)
+    # Minimum: 60 seconds (1 min)
+    interval-seconds: 300
 
   # =====================================================
   # Item Filters
@@ -90,9 +102,11 @@ messages:
 # =====================================================
 # Sounds
 # =====================================================
+# Note: Sound NAMES must be lowercase with dots (Minecraft 1.21+)
+# Examples: "entity.villager.yes", "entity.experience_orb.pickup"
 sounds:
-  collection-start: "ENTITY_EXPERIENCE_ORB_PICKUP"
-  collection-finish: "ENTITY_PLAYER_LEVELUP"
-  sell-success: "ENTITY_VILLAGER_YES"
-  sell-failed: "ENTITY_VILLAGER_NO"
-  upgrade: "BLOCK_ANVIL_USE"
+  collection-start: "entity.experience_orb.pickup"
+  collection-finish: "entity.player.levelup"
+  sell-success: "entity.villager.yes"
+  sell-failed: "entity.villager.no"
+  upgrade: "block.anvil.use"

@@ -1,6 +1,7 @@
 com\github\Syaaddd\autoCollectGrow\hooks\ShopGuiPlusHook.class
 com\github\Syaaddd\autoCollectGrow\hooks\PlaceholderAPIHook.class
 com\github\Syaaddd\autoCollectGrow\items\AutoCollectorTier1.class
+com\github\Syaaddd\autoCollectGrow\tasks\AutoSellTask.class
 com\github\Syaaddd\autoCollectGrow\hooks\VaultHook.class
 com\github\Syaaddd\autoCollectGrow\utils\ItemUtils.class
 com\github\Syaaddd\autoCollectGrow\items\AutoCollectorTier2.class

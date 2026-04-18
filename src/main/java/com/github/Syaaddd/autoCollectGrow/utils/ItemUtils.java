@@ -1,5 +1,6 @@
 package com.github.Syaaddd.autoCollectGrow.utils;
 
+import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItem;
 import org.bukkit.ChatColor;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -140,5 +141,42 @@ public class ItemUtils {
             }
         }
         return count;
+    }
+
+    /**
+     * Check if an ItemStack is a Slimefun item
+     * @param item The item to check
+     * @return true if the item is a registered Slimefun item, false otherwise
+     */
+    public static boolean isSlimefunItem(ItemStack item) {
+        if (item == null || item.getType().isAir()) {
+            return false;
+        }
+        
+        try {
+            SlimefunItem slimefunItem = SlimefunItem.getByItem(item);
+            return slimefunItem != null;
+        } catch (Exception e) {
+            // If there's any error, assume it's not a Slimefun item
+            return false;
+        }
+    }
+
+    /**
+     * Get the Slimefun item ID
+     * @param item The item to get the ID from
+     * @return The Slimefun item ID, or null if not a Slimefun item
+     */
+    public static String getSlimefunItemId(ItemStack item) {
+        if (item == null || item.getType().isAir()) {
+            return null;
+        }
+        
+        try {
+            SlimefunItem slimefunItem = SlimefunItem.getByItem(item);
+            return slimefunItem != null ? slimefunItem.getId() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

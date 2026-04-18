@@ -110,10 +110,12 @@ public class ShopGuiPlusHook {
     }
 
     /**
-     * Get the price of an item through ShopGUIPlus
-     * @param player The player selling the item (for price modifiers)
-     * @param item The item to get the price for
-     * @return The sell price of the item, or -1 if unavailable
+     * Get the unit sell price (per 1 item) through ShopGUIPlus.
+     * Always passes a single-item clone so the API returns the price for exactly 1 unit,
+     * matching how /sell hand computes its per-item rate before multiplying by amount.
+     * @param player The player selling the item (for price modifiers/permissions)
+     * @param item The item stack (amount is ignored; call site multiplies by actual amount)
+     * @return The sell price for 1 item, or -1 if unavailable
      */
     public double getItemPrice(Player player, ItemStack item) {
         if (!hooked) {
@@ -121,12 +123,17 @@ public class ShopGuiPlusHook {
         }
 
         try {
+            // Clone with amount=1 so the API always returns the unit price.
+            // This avoids double-counting when the caller multiplies by item.getAmount().
+            ItemStack singleItem = item.clone();
+            singleItem.setAmount(1);
+
             if (getItemPriceMethod != null) {
                 Object result;
                 if (apiInstance != null) {
-                    result = getItemPriceMethod.invoke(apiInstance, player, item);
+                    result = getItemPriceMethod.invoke(apiInstance, player, singleItem);
                 } else {
-                    result = getItemPriceMethod.invoke(null, player, item);
+                    result = getItemPriceMethod.invoke(null, player, singleItem);
                 }
 
                 if (result instanceof Double) {
