@@ -181,6 +181,7 @@ public class CollectorTask extends BukkitRunnable {
      */
     private void collectItems() {
         Location center = machineBlock.getLocation();
+        int maxItems = machine.getMaxItemsPerScan();
         int collected = 0;
 
         // Get the machine's BlockMenu
@@ -191,7 +192,14 @@ public class CollectorTask extends BukkitRunnable {
         }
 
         // Collect dropped items from the ground in radius
-        collected += collectDroppedItems(center, machineMenu);
+        int allowedForDropped = maxItems > 0 ? maxItems : Integer.MAX_VALUE;
+        collected += collectDroppedItems(center, machineMenu, allowedForDropped);
+
+        // Stop if limit already reached
+        if (maxItems > 0 && collected >= maxItems) {
+            plugin.getLogger().fine("Scan limit reached (" + maxItems + ") after collecting dropped items");
+            return;
+        }
 
         // Scan blocks in sphere radius and collect from containers
         int minX = center.getBlockX() - radius;
@@ -203,6 +211,7 @@ public class CollectorTask extends BukkitRunnable {
 
         int containersScanned = 0;
 
+        outerLoop:
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
@@ -229,33 +238,37 @@ public class CollectorTask extends BukkitRunnable {
                     BlockState state = block.getState();
                     if (state instanceof Container container) {
                         containersScanned++;
-                        collected += collectFromContainer(container, machineMenu);
+                        int remaining = maxItems > 0 ? maxItems - collected : Integer.MAX_VALUE;
+                        collected += collectFromContainer(container, machineMenu, remaining);
+
+                        // Stop scanning if limit reached
+                        if (maxItems > 0 && collected >= maxItems) {
+                            plugin.getLogger().fine("Scan limit reached (" + maxItems + ") during container scan");
+                            break outerLoop;
+                        }
                     }
                 }
             }
         }
 
-        // Log collection (energy consumed per tick is logged separately)
         if (containersScanned > 0 || collected > 0) {
-            plugin.getLogger().fine("Scanned " + containersScanned + " containers, collected " + collected + " items");
+            plugin.getLogger().fine("Scanned " + containersScanned + " containers, collected " + collected + (maxItems > 0 ? "/" + maxItems : "") + " items");
         }
     }
 
     /**
-     * Collect dropped items from the ground in radius
+     * Collect dropped items from the ground in radius, up to maxAllowed items
      */
-    private int collectDroppedItems(Location center, BlockMenu machineMenu) {
+    private int collectDroppedItems(Location center, BlockMenu machineMenu, int maxAllowed) {
         int collected = 0;
         double radiusSquared = radius * radius;
 
-        // Get all entities in the area using efficient method
         Collection<Entity> nearbyEntities;
         try {
-            // Get entities in a box around the center (more efficient)
             nearbyEntities = center.getWorld().getNearbyEntities(
-                center, 
-                radius, 
-                radius, 
+                center,
+                radius,
+                radius,
                 radius,
                 entity -> entity instanceof Item
             );
@@ -268,13 +281,11 @@ public class CollectorTask extends BukkitRunnable {
             return 0;
         }
 
-        // Try to collect each item entity
         for (Entity entity : nearbyEntities) {
             if (!(entity instanceof Item itemEntity)) {
                 continue;
             }
 
-            // Check distance (squared for performance)
             double distanceSquared = entity.getLocation().distanceSquared(center);
             if (distanceSquared > radiusSquared) {
                 continue;
@@ -285,23 +296,40 @@ public class CollectorTask extends BukkitRunnable {
                 continue;
             }
 
-            // Check if item is allowed
             String materialName = itemStack.getType().name();
             if (!plugin.getConfigManager().isItemAllowed(materialName)) {
                 continue;
             }
 
-            // Try to add item to machine storage
-            ItemStack remaining = machineMenu.pushItem(itemStack, machine.getStorageSlots());
+            // Limit how many items we take from this stack
+            int canTake = Math.min(itemStack.getAmount(), maxAllowed - collected);
+            ItemStack toCollect = canTake < itemStack.getAmount() ? itemStack.asQuantity(canTake) : itemStack;
+
+            ItemStack remaining = machineMenu.pushItem(toCollect, machine.getStorageSlots());
 
             if (remaining == null) {
-                // Item fully moved to machine storage - remove entity
-                itemEntity.remove();
-                collected += itemStack.getAmount();
-            } else if (remaining.getAmount() < itemStack.getAmount()) {
-                // Partially moved - update entity
-                itemEntity.setItemStack(remaining);
-                collected += (itemStack.getAmount() - remaining.getAmount());
+                // All of toCollect was stored
+                collected += canTake;
+                if (canTake == itemStack.getAmount()) {
+                    itemEntity.remove();
+                } else {
+                    itemStack.setAmount(itemStack.getAmount() - canTake);
+                    itemEntity.setItemStack(itemStack);
+                }
+            } else if (remaining.getAmount() < toCollect.getAmount()) {
+                // Partial storage
+                int moved = toCollect.getAmount() - remaining.getAmount();
+                collected += moved;
+                itemStack.setAmount(itemStack.getAmount() - moved);
+                if (itemStack.getAmount() <= 0) {
+                    itemEntity.remove();
+                } else {
+                    itemEntity.setItemStack(itemStack);
+                }
+            }
+
+            if (collected >= maxAllowed) {
+                break;
             }
         }
 
@@ -309,41 +337,51 @@ public class CollectorTask extends BukkitRunnable {
     }
 
     /**
-     * Collect items from a single container into machine storage
+     * Collect items from a single container into machine storage, up to maxAllowed items
      */
-    private int collectFromContainer(Container sourceContainer, BlockMenu machineMenu) {
+    private int collectFromContainer(Container sourceContainer, BlockMenu machineMenu, int maxAllowed) {
         int collected = 0;
         Inventory sourceInventory = sourceContainer.getInventory();
 
         for (int i = 0; i < sourceInventory.getSize(); i++) {
             ItemStack item = sourceInventory.getItem(i);
-            
+
             if (item == null || item.getType().isAir()) {
                 continue;
             }
 
-            // Check if item is allowed
             String materialName = item.getType().name();
             if (!plugin.getConfigManager().isItemAllowed(materialName)) {
                 continue;
             }
 
-            // Try to add item to machine storage
-            ItemStack remaining = machineMenu.pushItem(item, machine.getStorageSlots());
-            
+            // Limit how many items we take from this slot
+            int canTake = Math.min(item.getAmount(), maxAllowed - collected);
+            ItemStack toCollect = canTake < item.getAmount() ? item.asQuantity(canTake) : item;
+
+            ItemStack remaining = machineMenu.pushItem(toCollect, machine.getStorageSlots());
+
             if (remaining == null) {
-                // Item fully moved to machine storage
-                sourceInventory.setItem(i, null);
-                collected += item.getAmount();
-            } else if (remaining.getAmount() < item.getAmount()) {
-                // Partially moved
-                int moved = item.getAmount() - remaining.getAmount();
-                sourceInventory.setItem(i, remaining);
+                // All of toCollect was stored
+                collected += canTake;
+                if (canTake == item.getAmount()) {
+                    sourceInventory.setItem(i, null);
+                } else {
+                    item.setAmount(item.getAmount() - canTake);
+                    sourceInventory.setItem(i, item);
+                }
+            } else if (remaining.getAmount() < toCollect.getAmount()) {
+                // Partial storage
+                int moved = toCollect.getAmount() - remaining.getAmount();
                 collected += moved;
+                item.setAmount(item.getAmount() - moved);
+                sourceInventory.setItem(i, item.getAmount() > 0 ? item : null);
+            } else {
+                // Machine storage is full, stop
+                break;
             }
-            
-            // If machine storage is full, stop
-            if (remaining != null && remaining.getAmount() == item.getAmount()) {
+
+            if (collected >= maxAllowed) {
                 break;
             }
         }

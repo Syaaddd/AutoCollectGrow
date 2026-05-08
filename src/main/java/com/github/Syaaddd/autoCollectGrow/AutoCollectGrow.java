@@ -8,9 +8,11 @@ import com.github.Syaaddd.autoCollectGrow.items.AutoCollectorTier1;
 import com.github.Syaaddd.autoCollectGrow.items.AutoCollectorTier2;
 import com.github.Syaaddd.autoCollectGrow.items.AutoCollectorTier3;
 import com.github.Syaaddd.autoCollectGrow.items.AutoCollectorTier4;
+import com.github.Syaaddd.autoCollectGrow.listeners.MachineRestoreListener;
 import com.github.Syaaddd.autoCollectGrow.tasks.AutoSellTask;
 import io.github.thebusybiscuit.slimefun4.api.SlimefunAddon;
 import org.bstats.bukkit.Metrics;
+import org.bukkit.World;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -54,6 +56,21 @@ public final class AutoCollectGrow extends JavaPlugin implements SlimefunAddon {
 
         // Register Slimefun items
         registerItems();
+
+        // Register machine restore listener and scan already-loaded chunks
+        // (needed so machines placed before this restart are re-discovered)
+        MachineRestoreListener restoreListener = new MachineRestoreListener(this);
+        getServer().getPluginManager().registerEvents(restoreListener, this);
+        getServer().getScheduler().runTaskLater(this, () -> {
+            int restored = 0;
+            for (World world : getServer().getWorlds()) {
+                for (org.bukkit.Chunk chunk : world.getLoadedChunks()) {
+                    restoreListener.scanChunkForMachines(chunk);
+                    restored++;
+                }
+            }
+            getLogger().info("Machine restore scan complete (" + restored + " chunks scanned).");
+        }, 40L); // 2-second delay so Slimefun BlockStorage is fully ready
 
         // Start auto-sell task
         startAutoSellTask();
@@ -129,8 +146,11 @@ public final class AutoCollectGrow extends JavaPlugin implements SlimefunAddon {
     }
 
     private void startAutoSellTask() {
+        if (!configManager.isAutoSellEnabled()) {
+            getLogger().info("Auto-sell is disabled in config. Skipping auto-sell task.");
+            return;
+        }
         autoSellTask = new AutoSellTask(this);
-        // Convert seconds to ticks (20 ticks = 1 second)
         long intervalTicks = configManager.getAutoSellIntervalSeconds() * 20L;
         autoSellTask.runTaskTimer(this, intervalTicks, intervalTicks);
         getLogger().info("Auto-sell task scheduled every " + configManager.getAutoSellIntervalSeconds() + " seconds.");

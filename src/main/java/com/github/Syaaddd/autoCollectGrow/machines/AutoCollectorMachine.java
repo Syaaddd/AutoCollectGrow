@@ -49,6 +49,8 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
     private static final Map<Location, UUID> owners = new ConcurrentHashMap<>();
     // Track all placed machines for auto-sell (using string key: world:x:y:z)
     private static final Map<String, Location> allMachines = new ConcurrentHashMap<>();
+    // Registry: Slimefun ID -> machine instance (populated on postRegister)
+    private static final Map<String, AutoCollectorMachine> machineRegistry = new ConcurrentHashMap<>();
 
     // Storage slots (middle area excluding borders and control buttons)
     // Rows 2-5: slots 10-16, 19-25, 28-34, 37-43 (7 slots x 4 rows = 28 slots)
@@ -79,6 +81,11 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
         
         // Register GUI
         registerGUI();
+    }
+
+    @Override
+    public void postRegister() {
+        machineRegistry.put(getId(), this);
     }
 
     /**
@@ -326,6 +333,13 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
     }
 
     /**
+     * Get max items collected per scan cycle for this tier (0 = unlimited)
+     */
+    public int getMaxItemsPerScan() {
+        return AutoCollectGrow.getInstance().getConfigManager().getMaxItemsPerScan(tier);
+    }
+
+    /**
      * Get all registered machines
      */
     public static Collection<Location> getAllMachines() {
@@ -337,5 +351,57 @@ public abstract class AutoCollectorMachine extends SlimefunItem implements Energ
      */
     private static String locationToString(Location loc) {
         return loc.getWorld().getName() + ":" + loc.getBlockX() + ":" + loc.getBlockY() + ":" + loc.getBlockZ();
+    }
+
+    /**
+     * Returns true if the given Slimefun ID belongs to any AutoCollector machine tier.
+     * Used by MachineRestoreListener to identify machines in loaded chunks.
+     */
+    public static boolean isAutoCollectorId(String id) {
+        return id != null && machineRegistry.containsKey(id);
+    }
+
+    /**
+     * Restores a machine that already exists in the world (e.g. after server restart).
+     * Re-registers it in allMachines, restores the owner cache, and restarts the
+     * CollectorTask if the machine was enabled. Safe to call multiple times for the
+     * same location — already-running tasks are not duplicated.
+     */
+    public static void restoreMachineFromStorage(Block block, String id) {
+        try {
+            AutoCollectorMachine machine = machineRegistry.get(id);
+            if (machine == null) {
+                return;
+            }
+
+            Location loc = block.getLocation();
+
+            // Register in allMachines so AutoSellTask can find it
+            allMachines.put(locationToString(loc), loc);
+
+            // Restore owner cache
+            String ownerStr = BlockStorage.getLocationInfo(loc, "owner");
+            if (ownerStr != null) {
+                try {
+                    owners.put(loc, UUID.fromString(ownerStr));
+                } catch (IllegalArgumentException ignored) {}
+            }
+
+            // Restart CollectorTask if machine is enabled and not already running
+            if (!activeCollectors.containsKey(loc)) {
+                String enabled = BlockStorage.getLocationInfo(loc, "enabled");
+                if (!"false".equals(enabled)) {
+                    machine.startCollection(block);
+                }
+            }
+
+            AutoCollectGrow.getInstance().getLogger().fine(
+                "Restored machine " + id + " at " + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ()
+            );
+        } catch (Exception e) {
+            AutoCollectGrow.getInstance().getLogger().warning(
+                "Failed to restore machine " + id + " at " + block.getX() + "," + block.getY() + "," + block.getZ() + ": " + e.getMessage()
+            );
+        }
     }
 }

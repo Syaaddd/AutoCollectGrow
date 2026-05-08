@@ -52,6 +52,7 @@ public class AutoCollectorTier4 extends AutoCollectorMachine {
             lore.add("§7Quantum item collector");
             lore.add("§7");
             lore.add("§8▪ §7Radius: §e50 blocks");
+            lore.add("§8▪ §7Max items/scan: §e256");
             lore.add("§8▪ §7Energy: §e100 J/tick");
             lore.add("§8▪ §7Capacity: §e10000 J");
             lore.add("§7");

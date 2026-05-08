@@ -19,6 +19,7 @@ public class ConfigManager {
 
     // Configuration defaults
     private final Map<String, Integer> tierRadius = new HashMap<>();
+    private final Map<Integer, Integer> maxItemsPerScan = new HashMap<>();
     private int scanIntervalTicks;
     private boolean autoSellEnabled;
     private int autoSellIntervalSeconds;
@@ -41,6 +42,12 @@ public class ConfigManager {
         tierRadius.put("tier2", 10);
         tierRadius.put("tier3", 20);
         tierRadius.put("tier4", 50);
+
+        // Default max items per scan per tier (0 = unlimited)
+        maxItemsPerScan.put(1, 32);
+        maxItemsPerScan.put(2, 64);
+        maxItemsPerScan.put(3, 128);
+        maxItemsPerScan.put(4, 256);
 
         // Default settings
         scanIntervalTicks = 100; // 5 seconds
@@ -80,6 +87,11 @@ public class ConfigManager {
         // Tier radius settings
         for (Map.Entry<String, Integer> entry : tierRadius.entrySet()) {
             tierRadius.put(entry.getKey(), config.getInt("settings.tier-radius." + entry.getKey(), entry.getValue()));
+        }
+
+        // Max items per scan per tier
+        for (Map.Entry<Integer, Integer> entry : maxItemsPerScan.entrySet()) {
+            maxItemsPerScan.put(entry.getKey(), config.getInt("settings.max-items-per-scan.tier" + entry.getKey(), entry.getValue()));
         }
 
         // Scan settings
@@ -176,5 +188,9 @@ public class ConfigManager {
     // Check if Slimefun items can be sold
     public boolean canSellSlimefunItems() {
         return sellSlimefunItems;
+    }
+
+    public int getMaxItemsPerScan(int tier) {
+        return maxItemsPerScan.getOrDefault(tier, 64);
     }
 }

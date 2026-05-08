@@ -27,6 +27,18 @@ settings:
     tier4: 50
 
   # =====================================================
+  # Max Items Per Scan (collection limit per cycle)
+  # =====================================================
+  # Maximum items the machine collects per scan interval
+  # Higher tiers collect more items per scan
+  # Set to 0 to disable the limit (unlimited)
+  max-items-per-scan:
+    tier1: 32
+    tier2: 64
+    tier3: 128
+    tier4: 256
+
+  # =====================================================
   # Selling Settings
   # =====================================================
   selling:
@@ -41,7 +53,7 @@ settings:
   # =====================================================
   auto-sell:
     # Enable automatic selling at regular intervals
-    enabled: false
+    enabled: true
     # Interval in seconds for auto-sell
     # Recommended: 300 (5 min) to 1800 (30 min)
     # Minimum: 60 seconds (1 min)

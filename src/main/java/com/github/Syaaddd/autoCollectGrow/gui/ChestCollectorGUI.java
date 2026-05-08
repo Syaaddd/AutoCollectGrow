@@ -205,13 +205,16 @@ public class ChestCollectorGUI extends BlockMenuPreset {
         int charge = energyCharge != null ? Integer.parseInt(energyCharge) : 0;
         int maxCapacity = machine.getCapacity();
         int consumption = machine.getEnergyConsumption();
-        
+        int maxItems = machine.getMaxItemsPerScan();
+        String maxItemsDisplay = maxItems > 0 ? String.valueOf(maxItems) : "∞";
+
         ItemStack infoButton = new CustomItemStack(
             Material.BOOK,
             "§b§lMachine Info",
             "",
             "§7Tier: §e" + (tier != null ? tier : "?"),
             "§7Radius: §e" + (radius != null ? radius : "?") + " blocks",
+            "§7Max items/scan: §e" + maxItemsDisplay,
             "§7Stored Items: §e" + countStoredItems(menu),
             "",
             "§7Status: " + (machineEnabled ? "§aActive" : "§cInactive"),

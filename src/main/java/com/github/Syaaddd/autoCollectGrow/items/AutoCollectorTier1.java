@@ -59,6 +59,7 @@ public class AutoCollectorTier1 extends AutoCollectorMachine {
             lore.add("§7Basic item collector");
             lore.add("§7");
             lore.add("§8▪ §7Radius: §e5 blocks");
+            lore.add("§8▪ §7Max items/scan: §e32");
             lore.add("§8▪ §7Energy: §e10 J/tick");
             lore.add("§8▪ §7Capacity: §e1000 J");
             lore.add("§7");
